@@ -11,7 +11,7 @@ public sealed class RabbitMqTimeoutOptions
 
     public required string TimeoutQueueName { get; set; }
 
-    public uint PrefetchSize { get; set; } = 100;
+    public ushort PrefetchCount { get; set; } = 100;
 
     public Dictionary<string, object> QueueArguments { get; set; } = new();
 }

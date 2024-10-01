@@ -89,7 +89,7 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
 
         var connection = connectionFactory.CreateConnection();
         var channel = connection.CreateModel();
-        channel.BasicQos(prefetchCount: (ushort)_options.PrefetchSize, prefetchSize: 0, global: false);
+        channel.BasicQos(prefetchCount: _options.PrefetchCount, prefetchSize: 0, global: false);
 
         channel.QueueDeclare(_options.TimeoutQueueName, durable: true, exclusive: false, autoDelete: false,
             arguments: _options.QueueArguments);
