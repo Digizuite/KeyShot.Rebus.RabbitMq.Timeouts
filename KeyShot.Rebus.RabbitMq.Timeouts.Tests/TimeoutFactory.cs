@@ -7,31 +7,28 @@ namespace KeyShot.Rebus.RabbitMq.Timeouts.Tests;
 public class TimeoutFactory : ITimeoutManagerFactory
 {
     readonly FakeRebusTime _fakeRebusTime = new FakeRebusTime();
-    private RabbitMqTimeoutManager _manager = null!;
 
     public ITimeoutManager Create()
     {
         var consoleLoggerFactory = new ConsoleLoggerFactory(true);
         var manager = new RabbitMqTimeoutManager(new RabbitMqTimeoutOptions()
         {
-            HostName = "localhost",
-            Port = 5672,
-            Username = "user",
-            Password = "passw0rd",
-            VHost = "dev",
-            TimeoutQueueName = "rebusTimeouts",
+            HostName = TestHelper.HostName,
+            Port = TestHelper.Port,
+            Username = TestHelper.Username,
+            Password = TestHelper.Password,
+            VHost = TestHelper.Vhost,
+            TimeoutQueueName = TestHelper.TimeoutQueueName,
         }, consoleLoggerFactory, _fakeRebusTime);
 
         manager.Initialize();
-
-        _manager = manager;
         
         return manager;
     }
 
     public void Cleanup()
     {
-        _manager.DeleteInputQueue();
+        TestHelper.DeleteTestQueue();   
     }
 
     public string GetDebugInfo()
