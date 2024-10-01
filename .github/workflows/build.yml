@@ -1,0 +1,39 @@
+﻿on: [ push ]
+name: Build
+
+jobs:
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: Build and test
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: isbang/compose-action@v1.5.1
+        with:
+          compose-file: "./docker-compose.yml"
+          down-flags: "--volumes"
+          up-flags: "--quiet-pull"
+          
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          global-json-file: global.json
+
+      - name: Run build with warnings
+        run: dotnet build /p:TreatWarningsAsErrors=true /consoleloggerparameters:NoSummary
+
+      - name: Run tests
+        id: tests
+        run: |
+          dotnet test -m:1 --no-build --blame-hang-timeout 60seconds --diag:log.txt --blame-crash --logger GitHubActions -- RunConfiguration.CollectSourceInformation=true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() && steps.tests.conclusion == 'failure' }}
+        with:
+          name: crash-dumps
+          path: |
+            **/TestResults/**/*.*
+            log.txt
