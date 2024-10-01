@@ -13,8 +13,15 @@ public static class TimeoutConfigurationExtensions
     public static void StoreInRabbitMq(this StandardConfigurer<ITimeoutManager> configurer,
         RabbitMqTimeoutOptions options)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(configurer);
+        if (options == null!)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+
+        if (configurer == null!)
+        {
+            throw new ArgumentNullException(nameof(configurer));
+        }
         
         configurer.Register(c =>
         {

@@ -32,7 +32,7 @@ sealed class TimeoutConsumer : DefaultBasicConsumer, IDisposable
 
     public void RemoveFromQueue(ulong deliveryTag)
     {
-        _queuedMessages.Remove(deliveryTag, out _);
+        _queuedMessages.TryRemove(deliveryTag, out _);
     }
 
     public void Dispose()
