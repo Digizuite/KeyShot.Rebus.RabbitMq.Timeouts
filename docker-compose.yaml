@@ -1,0 +1,17 @@
+version: "3"
+services:
+  rabbit:
+    image: rabbitmq:3.11-management
+    hostname: rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: passw0rd
+      RABBITMQ_DEFAULT_VHOST: dev
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq:

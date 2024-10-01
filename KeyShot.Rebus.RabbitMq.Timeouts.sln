@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyShot.Rebus.RabbitMq.Timeouts", "KeyShot.Rebus.RabbitMq.Timeouts\KeyShot.Rebus.RabbitMq.Timeouts.csproj", "{6FA21C05-F59C-4C7C-9667-0FE395E7C66E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeyShot.Rebus.RabbitMq.Timeouts.Tests", "KeyShot.Rebus.RabbitMq.Timeouts.Tests\KeyShot.Rebus.RabbitMq.Timeouts.Tests.csproj", "{4A699A2E-BFE8-447E-A897-F8A78A8B9CA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FA21C05-F59C-4C7C-9667-0FE395E7C66E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FA21C05-F59C-4C7C-9667-0FE395E7C66E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FA21C05-F59C-4C7C-9667-0FE395E7C66E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FA21C05-F59C-4C7C-9667-0FE395E7C66E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A699A2E-BFE8-447E-A897-F8A78A8B9CA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A699A2E-BFE8-447E-A897-F8A78A8B9CA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A699A2E-BFE8-447E-A897-F8A78A8B9CA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A699A2E-BFE8-447E-A897-F8A78A8B9CA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
