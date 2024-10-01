@@ -43,7 +43,12 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
 
     public Task<DueMessagesResult> GetDueMessages()
     {
+        #if DEBUG
+        // Add a bit of delay for testing to ensure we actually have had time to 
+        // receive the messages from Rabbit.
         Thread.Sleep(1000);
+        #endif
+        
         var consumer = RequireConsumer();
         
         var now = _rebusTime.Now.ToUnixTimeMilliseconds();
