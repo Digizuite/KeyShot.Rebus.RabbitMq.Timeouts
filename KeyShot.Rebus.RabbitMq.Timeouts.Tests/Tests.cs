@@ -24,13 +24,13 @@ public class OtherTests : FixtureBase
 {
     protected override void SetUp()
     {
-        TestHelper.DeleteTestQueue();
+        TestHelper.DeleteTestQueue().GetAwaiter().GetResult();
         base.SetUp();
     }
 
     protected override void TearDown()
     {
-        TestHelper.DeleteTestQueue();
+        TestHelper.DeleteTestQueue().GetAwaiter().GetResult();
         base.TearDown();
     }
 
@@ -48,7 +48,7 @@ public class OtherTests : FixtureBase
             TimeoutQueueName = TestHelper.TimeoutQueueName,
         }, consoleLoggerFactory, new FakeRebusTime());
 
-        manager.Initialize();
+        await manager.InitializeAsync();
 
         await manager.Defer(DateTimeOffset.UnixEpoch, new Dictionary<string, string>(), [1]);
 

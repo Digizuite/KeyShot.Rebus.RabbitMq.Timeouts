@@ -5,44 +5,48 @@ namespace KeyShot.Rebus.RabbitMq.Timeouts;
 sealed class QueuedMessage
 {
     public readonly ulong DeliveryTag;
-    public readonly Dictionary<string, string> Headers;
+    public readonly Dictionary<string, string?> Headers;
     public readonly byte[] Body;
     private readonly TimeoutConsumer _consumer;
     public readonly long DueTime;
 
-    public QueuedMessage(ulong deliveryTag, IDictionary<string, object> headers, ReadOnlyMemory<byte> body,
+    public QueuedMessage(ulong deliveryTag, IDictionary<string, object?>? headers, ReadOnlyMemory<byte> body,
         TimeoutConsumer consumer)
     {
         DeliveryTag = deliveryTag;
 
         Headers = new();
-        foreach (var pair in headers)
+        if (headers != null)
         {
-            if (pair.Key == RebusRabbitMqTimeoutHeaders.DueTime)
+            foreach (var pair in headers)
             {
-                continue;
+                if (pair.Key == RebusRabbitMqTimeoutHeaders.DueTime)
+                {
+                    continue;
+                }
+
+                if (pair.Value is byte[] bytes)
+                {
+                    Headers.Add(pair.Key, Encoding.UTF8.GetString(bytes));
+                    continue;
+                }
+
+                Headers.Add(pair.Key, pair.Value?.ToString()!);
             }
-            
-            if(pair.Value is byte[] bytes)
-            {
-                Headers.Add(pair.Key, Encoding.UTF8.GetString(bytes));
-                continue;
-            }
-            Headers.Add(pair.Key, pair.Value.ToString()!);
+
+
+            DueTime = (long)(headers[RebusRabbitMqTimeoutHeaders.DueTime] ?? 0);
         }
-        
-        
-        DueTime = (long)headers[RebusRabbitMqTimeoutHeaders.DueTime];
-        
-        
+
+
         _consumer = consumer;
         Body = body.ToArray();
     }
 
-    public void Ack()
+    public ValueTask Ack()
     {
         _consumer.RemoveFromQueue(DeliveryTag);
         
-        _consumer.Model.BasicAck(DeliveryTag, multiple: false);
+        return _consumer.Channel.BasicAckAsync(DeliveryTag, multiple: false);
     }
 }
