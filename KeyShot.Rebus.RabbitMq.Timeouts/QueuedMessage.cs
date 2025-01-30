@@ -10,7 +10,7 @@ sealed class QueuedMessage
     private readonly TimeoutConsumer _consumer;
     public readonly long DueTime;
 
-    public QueuedMessage(ulong deliveryTag, IDictionary<string, object?>? headers, ReadOnlyMemory<byte> body,
+    public QueuedMessage(ulong deliveryTag, IDictionary<string, object?>? headers, byte[] body,
         TimeoutConsumer consumer)
     {
         DeliveryTag = deliveryTag;
@@ -40,7 +40,7 @@ sealed class QueuedMessage
 
 
         _consumer = consumer;
-        Body = body.ToArray();
+        Body = body;
     }
 
     public ValueTask Ack()
