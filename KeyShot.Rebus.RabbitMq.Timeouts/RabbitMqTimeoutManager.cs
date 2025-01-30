@@ -59,15 +59,15 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
         _log.Debug("Message deferred until {dueTime}", approximateDueTime);
     }
 
-    public Task<DueMessagesResult> GetDueMessages()
+    public async Task<DueMessagesResult> GetDueMessages()
     {
         ForcedTestDelay();
         
         var consumer = RequireConsumer();
         if (!consumer.Channel.IsOpen)
         {
-            _log.Debug("Consumer model is closed, reinitializing");
-            Initialize();
+            _log.Debug("Consumer channel is closed, reinitializing");
+            await InitializeAsync();
             consumer = RequireConsumer();
             ForcedTestDelay();
         }
@@ -78,15 +78,14 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
             .Where(message => message.DueTime <= now)
             .Select(message =>
             {
-                return new DueMessage(message.Headers, message.Body.ToArray(), () =>
+                return new DueMessage(message.Headers, message.Body.ToArray(), async () =>
                 {
-                    message.Ack();
-                    return Task.CompletedTask;
+                    await message.Ack();
                 });
             })
             .ToList();
 
-        return Task.FromResult(new DueMessagesResult(messages));
+        return new DueMessagesResult(messages);
     }
 
     [Conditional("DEBUG")]
