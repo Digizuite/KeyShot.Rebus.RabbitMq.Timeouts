@@ -13,5 +13,5 @@ public sealed class RabbitMqTimeoutOptions
 
     public ushort PrefetchCount { get; set; } = 100;
 
-    public Dictionary<string, object> QueueArguments { get; set; } = new();
+    public Dictionary<string, object?> QueueArguments { get; set; } = new();
 }

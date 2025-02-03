@@ -11,7 +11,7 @@ public static class TestHelper
     public const int Port = 5672;
     public const string HostName = "localhost";
     
-    public static void DeleteTestQueue()
+    public static async Task DeleteTestQueue()
     {
         
         var connectionFactory = new ConnectionFactory()
@@ -25,8 +25,8 @@ public static class TestHelper
             HostName = HostName,
         };
 
-        using var connection = connectionFactory.CreateConnection();
-        using var model = connection.CreateModel();
-        model.QueueDelete(TimeoutQueueName);
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        await using var model = await connection.CreateChannelAsync();
+        await model.QueueDeleteAsync(TimeoutQueueName);
     }
 }

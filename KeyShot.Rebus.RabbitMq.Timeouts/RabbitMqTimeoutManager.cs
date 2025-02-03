@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using Rebus.Bus;
@@ -9,13 +8,14 @@ using Rebus.Timeouts;
 
 namespace KeyShot.Rebus.RabbitMq.Timeouts;
 
-public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, IDisposable
+public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, IDisposable, IAsyncDisposable
 {
     private readonly ILog _log;
     private readonly ILog _timeoutConsumerLog;
     private TimeoutConsumer? _consumer;
     private readonly IRebusTime _rebusTime;
     private readonly RabbitMqTimeoutOptions _options;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public RabbitMqTimeoutManager(RabbitMqTimeoutOptions options, IRebusLoggerFactory loggerFactory,
         IRebusTime rebusTime)
@@ -39,36 +39,35 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
         catch (RabbitMQClientException e)
         {
             _log.Warn(e, "RabbitMQ client exception encountered while attempting to defer message. Reinitializing client and trying again.");
-            Initialize();
+            await InitializeAsync();
 
             await DeferCore(approximateDueTime, headers, body);
         }
     }
 
-    private Task DeferCore(DateTimeOffset approximateDueTime, Dictionary<string, string> headers, byte[] body)
+    private async ValueTask DeferCore(DateTimeOffset approximateDueTime, Dictionary<string, string> headers, byte[] body)
     {
         var consumer = RequireConsumer();
             
-        var properties = consumer.Model.CreateBasicProperties();
-        properties.Headers = headers.ToDictionary(p => p.Key, p => (object)p.Value);
+        var properties = new BasicProperties();
+        properties.Headers = headers.ToDictionary(p => p.Key, object? (p) => p.Value);
         properties.Headers[RebusRabbitMqTimeoutHeaders.DueTime] = approximateDueTime.ToUnixTimeMilliseconds();
 
-        consumer.Model.BasicPublish(exchange: string.Empty, routingKey: _options.TimeoutQueueName, mandatory: true,
+        await consumer.Channel.BasicPublishAsync(exchange: string.Empty, routingKey: _options.TimeoutQueueName, mandatory: true,
             properties, body);
 
         _log.Debug("Message deferred until {dueTime}", approximateDueTime);
-        return Task.CompletedTask;
     }
 
-    public Task<DueMessagesResult> GetDueMessages()
+    public async Task<DueMessagesResult> GetDueMessages()
     {
         ForcedTestDelay();
         
         var consumer = RequireConsumer();
-        if (!consumer.Model.IsOpen)
+        if (!consumer.Channel.IsOpen)
         {
-            _log.Debug("Consumer model is closed, reinitializing");
-            Initialize();
+            _log.Debug("Consumer channel is closed, reinitializing");
+            await InitializeAsync();
             consumer = RequireConsumer();
             ForcedTestDelay();
         }
@@ -79,15 +78,14 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
             .Where(message => message.DueTime <= now)
             .Select(message =>
             {
-                return new DueMessage(message.Headers, message.Body.ToArray(), () =>
+                return new DueMessage(message.Headers, message.Body.ToArray(), async () =>
                 {
-                    message.Ack();
-                    return Task.CompletedTask;
+                    await message.Ack();
                 });
             })
             .ToList();
 
-        return Task.FromResult(new DueMessagesResult(messages));
+        return new DueMessagesResult(messages);
     }
 
     [Conditional("DEBUG")]
@@ -110,10 +108,20 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
 
     public void Initialize()
     {
-        lock (this)
+        InitializeAsync().GetAwaiter().GetResult();
+    }
+
+    public async Task InitializeAsync()
+    {
+        await _initLock.WaitAsync();
+        try
         {
-            _consumer?.Dispose();
-            _consumer = null;
+            if (_consumer is { } c)
+            {
+                _consumer = null;
+                await c.DisposeAsync();
+            }
+
             var connectionFactory = new ConnectionFactory()
             {
                 AutomaticRecoveryEnabled = true,
@@ -125,24 +133,37 @@ public sealed class RabbitMqTimeoutManager : ITimeoutManager, IInitializable, ID
                 HostName = _options.HostName,
             };
 
-            var connection = connectionFactory.CreateConnection();
-            var channel = connection.CreateModel();
-            channel.BasicQos(prefetchCount: _options.PrefetchCount, prefetchSize: 0, global: false);
+            var connection = await connectionFactory.CreateConnectionAsync();
+            var channel = await connection.CreateChannelAsync();
+            await channel.BasicQosAsync(prefetchCount: _options.PrefetchCount, prefetchSize: 0, global: false);
 
-            channel.QueueDeclare(_options.TimeoutQueueName, durable: true, exclusive: false, autoDelete: false,
+            await channel.QueueDeclareAsync(_options.TimeoutQueueName, durable: true, exclusive: false,
+                autoDelete: false,
                 arguments: _options.QueueArguments);
 
 
             _consumer = new TimeoutConsumer(channel, connection, _timeoutConsumerLog);
 
-            channel.BasicConsume(_options.TimeoutQueueName, autoAck: false, _consumer);
+            await channel.BasicConsumeAsync(_options.TimeoutQueueName, autoAck: false, _consumer);
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 
 
     public void Dispose()
     {
-        _consumer?.Dispose();
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_consumer is { } c)
+        {
+            await c.DisposeAsync();
+        }
     }
 }
 

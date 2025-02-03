@@ -28,7 +28,7 @@ public class TimeoutFactory : ITimeoutManagerFactory
 
     public void Cleanup()
     {
-        TestHelper.DeleteTestQueue();   
+        TestHelper.DeleteTestQueue().GetAwaiter().GetResult();   
     }
 
     public string GetDebugInfo()
