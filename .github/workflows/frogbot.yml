@@ -1,3 +1,4 @@
+# workflow-hardening: 1 finding needs manual review — see PR description
 name: "Frogbot Security Scan"
 
 on:
