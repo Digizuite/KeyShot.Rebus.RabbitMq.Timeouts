@@ -1,0 +1,30 @@
+name: "Frogbot Scan Repository"
+
+on:
+  push:
+    branches:
+      - "master"
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to scan."
+        type: string
+        required: false
+        default: "master"
+
+jobs:
+  scan-repository:
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+      # Required for the OIDC token exchange with the JFrog platform.
+      id-token: write
+    uses: keyshot-dev/.github/.github/workflows/frogbot-reusable.yml@main
+    with:
+      branch: ${{ inputs.branch || 'master' }}
+      oidc_provider_name: keyshot-dev-github
+    secrets:
+      JF_URL: ${{ secrets.JF_URL }}
