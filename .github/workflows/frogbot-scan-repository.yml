@@ -1,5 +1,8 @@
 name: "Frogbot Scan Repository"
 
+# Default GITHUB_TOKEN permissions; the job below grants only what it needs.
+permissions: {}
+
 on:
   push:
     branches:
@@ -14,17 +17,38 @@ on:
         required: false
         default: "master"
 
+concurrency:
+  group: frogbot-scan-repository-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   scan-repository:
+    name: "Scan repository"
+    runs-on: ubuntu-latest
+    environment: frogbot
     permissions:
       contents: read
-      pull-requests: write
-      security-events: write
-      # Required for the OIDC token exchange with the JFrog platform.
-      id-token: write
-    uses: keyshot-dev/.github/.github/workflows/frogbot-reusable.yml@main
-    with:
-      branch: ${{ inputs.branch || 'master' }}
-      oidc_provider_name: keyshot-dev-github
-    secrets:
-      JF_URL: ${{ secrets.JF_URL }}
+      pull-requests: write  # Frogbot opens/updates its own fix pull requests.
+      security-events: write  # Frogbot uploads scan results as SARIF.
+      id-token: write  # Required for the OIDC token exchange with the JFrog platform.
+    steps:
+      # Required for Frogbot v3, which scans a copy of the working tree rather
+      # than cloning the repository as v2 did. Without it the scan sees an
+      # empty directory and reports no components.
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          persist-credentials: false
+
+      # No JF_ACCESS_TOKEN: the action exchanges the GitHub OIDC token for a
+      # short-lived JFrog access token and sets it itself.
+      - name: Frogbot scan
+        uses: jfrog/frogbot@7d2603d053b111cb5c2470ea89bd5bb14154fa79 # v3.5.0
+        with:
+          oidc-provider-name: keyshot-dev-github
+          oidc-audience: frogbot
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JF_GIT_BASE_BRANCH: ${{ inputs.branch || 'master' }}
